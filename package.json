@@ -1,0 +1,45 @@
+{
+  "name": "learn-postgres",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Basic Node.js Express server with PostgreSQL connection",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "prepare": "husky",
+    "seed": "node src/seeders/index.js",
+    "seed:superadmin": "node src/seeders/index.js superadmin"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.0",
+    "sequelize": "^6.35.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.27.0",
+    "eslint": "^9.27.0",
+    "eslint-config-prettier": "^10.1.5",
+    "globals": "^16.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.5.3"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs}": [
+      "prettier --write",
+      "eslint --fix --max-warnings=0"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}
