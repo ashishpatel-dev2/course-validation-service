@@ -21,7 +21,11 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.0",
-    "sequelize": "^6.35.0"
+    "sequelize": "^6.35.0",
+    "@contentstack/delivery-sdk": "^4.5.1",
+    "@contentstack/live-preview-utils": "^3.1.1",
+    "@contentstack/management": "^1.19.1",
+    "@contentstack/utils": "^1.3.16"
   },
   "devDependencies": {
     "@eslint/js": "^9.27.0",

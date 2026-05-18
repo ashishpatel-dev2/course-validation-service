@@ -1,12 +1,14 @@
 import express from 'express';
+import validationRoutes from './routes/validation.js';
+import { AppError } from './utils/error.js';
+import { sendResponse } from './utils/response.js';
 
 const app = express();
 
 app.use(express.json());
+app.use('/api', validationRoutes);
 
-app.use((req, res) => {
-  return res.status(404).json({ message: 'Route not found' });
-});
+app.use((_req, _res, next) => next(new AppError('Route not found', 404)));
 
 app.use((error, req, res, next) => {
   console.error('Unhandled application error:', error.message);
@@ -16,10 +18,14 @@ app.use((error, req, res, next) => {
   }
 
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
-    return res.status(400).json({ message: 'Invalid JSON payload' });
+    return sendResponse(res, {
+      statusCode: 400,
+      message: 'Invalid JSON payload'
+    });
   }
 
-  return res.status(error.statusCode || 500).json({
+  return sendResponse(res, {
+    statusCode: error.statusCode || 500,
     message: error.message || 'Internal server error'
   });
 });
