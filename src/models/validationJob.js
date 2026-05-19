@@ -30,10 +30,18 @@ const validationJobModel = (sequelize) => {
       locale_path: {
         type: DataTypes.STRING,
         allowNull: true
+      },
+      version: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1
       }
     },
     {
-      tableName: 'validation_jobs'
+      tableName: 'validation_jobs',
+      underscored: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at'
     }
   );
 

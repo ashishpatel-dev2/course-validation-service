@@ -40,7 +40,10 @@ const validationResultModel = (sequelize) => {
       }
     },
     {
-      tableName: 'validation_results'
+      tableName: 'validation_results',
+      underscored: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at'
     }
   );
 

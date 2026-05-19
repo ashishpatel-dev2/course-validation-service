@@ -2,10 +2,18 @@ import express from 'express';
 import validationRoutes from './routes/validation.js';
 import { AppError } from './utils/error.js';
 import { sendResponse } from './utils/response.js';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import morgan from 'morgan';
 
 const app = express();
-
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(morgan('tiny'));
+app.use(bodyParser.json({ limit: '30mb', extended: true }));
+app.use(bodyParser.urlencoded({ limit: '30mb', extended: true }));
+app.use(cors({ origin: true, credentials: true }));
+
 app.use('/api', validationRoutes);
 
 app.use((_req, _res, next) => next(new AppError('Route not found', 404)));

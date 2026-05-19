@@ -13,27 +13,23 @@ export const getCourse = async ({ entryQuery, lng = 'en-us', withEditTags = true
 
   if (!content_type_uid || !entry_uid) return { course: null };
 
-  try {
-    const course = await contentStackAPI
-      .contentType(content_type_uid)
-      .entry(entry_uid)
-      .locale(lng.toLocaleLowerCase())
-      .includeContentType()
-      .includeEmbeddedItems()
-      .addParams({
-        include_all: 'true',
-        include_all_depth: '4',
-        include_reference_details: 'true',
-        include_applied_variants: 'true'
-      })
-      .fetch();
+  const course = await contentStackAPI
+    .contentType(content_type_uid)
+    .entry(entry_uid)
+    .locale(lng.toLocaleLowerCase())
+    .includeContentType()
+    .includeEmbeddedItems()
+    .addParams({
+      include_all: 'true',
+      include_all_depth: '4',
+      include_reference_details: 'true',
+      include_applied_variants: 'true'
+    })
+    .fetch();
 
-    if (withEditTags) {
-      addEditableTags(course, content_type_uid, true, lng);
-    }
-
-    return { course };
-  } catch (error) {
-    console.log(error);
+  if (withEditTags) {
+    addEditableTags(course, content_type_uid, true, lng);
   }
+
+  return { course };
 };

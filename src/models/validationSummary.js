@@ -31,7 +31,10 @@ const validationSummaryModel = (sequelize) => {
       }
     },
     {
-      tableName: 'validation_summary'
+      tableName: 'validation_summary',
+      underscored: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at'
     }
   );
 

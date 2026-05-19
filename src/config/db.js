@@ -11,7 +11,10 @@ const dbConfig = {
 const sequelize = new Sequelize(dbConfig.database, dbConfig.username, dbConfig.password, {
   host: dbConfig.host,
   dialect: dbConfig.dialect,
-  logging: dbConfig.logging
+  logging: dbConfig.logging,
+  define: {
+    underscored: true
+  }
 });
 
 const escapeIdentifier = (name) => name.replace(/"/g, '""');
