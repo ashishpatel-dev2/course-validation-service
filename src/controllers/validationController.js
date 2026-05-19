@@ -42,8 +42,6 @@ export const createValidationJobController = async (req, res) => {
       locale: normalizedLocale
     });
 
-    console.log(validation.summary, 'validationSummary');
-
     return sendSuccess(res, {
       statusCode: 202,
       data: {

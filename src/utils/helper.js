@@ -7,6 +7,11 @@ const Severity = {
   Warning: 'Warning'
 };
 
+const IssueType = {
+  Empty: 'EMPTY',
+  SameAsEnglish: 'SAME_AS_ENGLISH'
+};
+
 // ─── Atom field maps ──────────────────────────────────────────────────────────
 const ATOM_FIELD_RULES = {
   atom_simple_text: [
@@ -164,7 +169,31 @@ function isSameAsEng(engVal, locVal) {
   );
 }
 
-function makeIssue({ jobId, courseId, locale, severity, path, field, description }) {
+function toDisplayValue(value, max = 180) {
+  if (value === null || value === undefined) return '';
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function normalizeAtomType(atomType) {
+  if (!atomType) return 'unknown';
+
+  return atomType;
+}
+
+function makeIssue({
+  jobId,
+  courseId,
+  locale,
+  severity,
+  path,
+  field,
+  description,
+  issueType = null,
+  englishValue = '',
+  localizedValue = ''
+}) {
   return {
     job_id: jobId,
     course_id: courseId,
@@ -172,7 +201,10 @@ function makeIssue({ jobId, courseId, locale, severity, path, field, description
     severity_level: severity,
     object_path: path,
     field_name: field,
-    issue_description: description
+    issue_description: description,
+    issueType,
+    englishValue,
+    localizedValue
   };
 }
 
@@ -222,28 +254,38 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   const courseId = engCourse.uid ?? engCourse._id ?? engCourse.id ?? 'unknown';
 
   // ─── push ───────────────────────────────────────────────────────────────────
-  function push(severity, path, field, description) {
-    issues.push(makeIssue({ jobId, courseId, locale, severity, path, field, description }));
+  function push(severity, path, field, description, extra = {}) {
+    issues.push(
+      makeIssue({ jobId, courseId, locale, severity, path, field, description, ...extra })
+    );
   }
 
   // ─── checkField ─────────────────────────────────────────────────────────────
-  // KEY FIX: guard both parent objects before accessing nested values
   function checkField(engObj, locObj, fieldPath, severity, description, objectPath) {
-    if (!engObj || !locObj) return;
+    if (!engObj) return;
 
     const engVal = getNestedValue(engObj, fieldPath);
     const locVal = getNestedValue(locObj, fieldPath);
 
-    if (isMissing(engVal)) return;
+    // if (isMissing(engVal)) return;
 
     if (isMissing(locVal)) {
-      push(severity, objectPath, fieldPath, `${description} — value is missing`);
+      push(severity, objectPath, fieldPath, `${description} — value is missing`, {
+        issueType: IssueType.Empty,
+        englishValue: toDisplayValue(engVal),
+        localizedValue: toDisplayValue(locVal)
+      });
     } else if (isSameAsEng(engVal, locVal)) {
       push(
         Severity.Warning,
         objectPath,
         fieldPath,
-        `${description} — value appears unchanged from English`
+        `${description} — value appears unchanged from English`,
+        {
+          issueType: IssueType.SameAsEnglish,
+          englishValue: toDisplayValue(engVal),
+          localizedValue: toDisplayValue(locVal)
+        }
       );
     }
   }
@@ -381,20 +423,22 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   function validateAtom(engAtom, locAtom, path) {
     if (!engAtom) return;
 
-    const atomType = engAtom._content_type_uid ?? engAtom.type ?? 'unknown';
+    const rawEngAtomType = engAtom._content_type_uid;
+    const atomType = normalizeAtomType(rawEngAtomType);
 
     if (!locAtom) {
-      push(Severity.Critical, path, 'atom', `Locale atom is missing (type: ${atomType})`);
+      push(Severity.Critical, path, 'atom', `Locale atom is missing (type: ${rawEngAtomType})`);
       return;
     }
 
-    const locAtomType = locAtom._content_type_uid ?? locAtom.type ?? 'unknown';
+    const rawLocAtomType = locAtom._content_type_uid;
+    const locAtomType = normalizeAtomType(rawLocAtomType);
     if (atomType !== locAtomType) {
       push(
         Severity.Critical,
         path,
         '_content_type_uid',
-        `Atom type mismatch — eng: ${atomType}, locale: ${locAtomType}`
+        `Atom type mismatch — eng: ${rawEngAtomType}, locale: ${rawLocAtomType}`
       );
       return;
     }
@@ -680,7 +724,11 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     if (!checkCount(engAtoms, locAtoms, 'atoms', path)) return;
 
     engAtoms.forEach((engAtom, i) => {
-      validateAtom(engAtom, locAtoms[i], `${path}.atoms[${i}]`);
+      validateAtom(
+        engAtom.atom_reference?.[0],
+        locAtoms[i].atom_reference?.[0],
+        `${path}.atoms[${i}]`
+      );
     });
   }
 
@@ -959,7 +1007,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   checkField(
     engCourse,
     localeCourse,
-    'title',
+    'display_title',
     Severity.High,
     'Course title is not translated',
     'course'
@@ -967,7 +1015,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   checkField(
     engCourse,
     localeCourse,
-    'description',
+    'course_description',
     Severity.Medium,
     'Course description is not translated',
     'course'
