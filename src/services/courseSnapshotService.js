@@ -1,4 +1,4 @@
-import { mkdir, rename, writeFile } from 'node:fs/promises';
+import { access, mkdir, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getAvailableLocales } from '../contentstack/getAvailableLocales.js';
 import { getCourse } from '../contentstack/getCourse.js';
@@ -45,6 +45,15 @@ const stringifySnapshot = (course, locale) => {
   return serialized;
 };
 
+const fileExists = async (filePath) => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const prepareCourseSnapshots = async ({ courseId, locale }) => {
   const normalizedLocale = locale.toLowerCase();
   const availableLocales = await getAvailableLocales();
@@ -59,8 +68,6 @@ export const prepareCourseSnapshots = async ({ courseId, locale }) => {
     fetchCourseByLocale({ courseId, locale: normalizedLocale })
   ]);
 
-  console.log(baseCourse, baseCourse?._version, 'baseCourse');
-
   const version = baseCourse?._version;
 
   const courseDir = path.join(process.cwd(), 'public', 'course');
@@ -74,19 +81,34 @@ export const prepareCourseSnapshots = async ({ courseId, locale }) => {
   );
   const absoluteBasePath = path.join(process.cwd(), basePath);
   const absoluteLocalePath = path.join(process.cwd(), localePath);
-  const baseSerialized = stringifySnapshot(baseCourse, BASE_LOCALE);
-  const localizedSerialized = stringifySnapshot(localizedCourse, normalizedLocale);
-
-  await Promise.all([
-    writeFile(`${absoluteBasePath}.tmp`, baseSerialized, 'utf-8').then(() =>
-      rename(`${absoluteBasePath}.tmp`, absoluteBasePath)
-    ),
-    writeFile(`${absoluteLocalePath}.tmp`, localizedSerialized, 'utf-8').then(() =>
-      rename(`${absoluteLocalePath}.tmp`, absoluteLocalePath)
-    )
+  const [baseExists, localeExists] = await Promise.all([
+    fileExists(absoluteBasePath),
+    fileExists(absoluteLocalePath)
   ]);
 
-  console.log(basePath, localePath, normalizedLocale, 'normalizedLocale');
+  const writes = [];
+
+  if (!baseExists) {
+    const baseSerialized = stringifySnapshot(baseCourse, BASE_LOCALE);
+    writes.push(
+      writeFile(`${absoluteBasePath}.tmp`, baseSerialized, 'utf-8').then(() =>
+        rename(`${absoluteBasePath}.tmp`, absoluteBasePath)
+      )
+    );
+  }
+
+  if (!localeExists) {
+    const localizedSerialized = stringifySnapshot(localizedCourse, normalizedLocale);
+    writes.push(
+      writeFile(`${absoluteLocalePath}.tmp`, localizedSerialized, 'utf-8').then(() =>
+        rename(`${absoluteLocalePath}.tmp`, absoluteLocalePath)
+      )
+    );
+  }
+
+  if (writes.length > 0) {
+    await Promise.all(writes);
+  }
 
   return {
     basePath,
