@@ -9,53 +9,61 @@ const Severity = {
 
 const IssueType = {
   Empty: 'EMPTY',
-  SameAsEnglish: 'SAME_AS_ENGLISH'
+  SameAsEnglish: 'SAME_AS_ENGLISH',
+  FileMissing: 'FILE_MISSING',
+  FileChanged: 'FILE_CHANGED'
 };
 
 // ─── Atom field maps ──────────────────────────────────────────────────────────
+// title is intentionally excluded from all atoms per requirements.
+// Only flat string fields that are translatable are listed here.
+// Deep/array fields and File fields are handled in the type-specific
+// deep validation blocks inside validateAtom.
 const ATOM_FIELD_RULES = {
-  atom_simple_text: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['body', Severity.High, 'Simple-text body is not translated']
-  ],
-  atom_rich_text: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['body', Severity.High, 'Rich-text body is not translated']
-  ],
+  // ── Content / Media ─────────────────────────────────────────────────────────
+
+  atom_simple_text: [['body', Severity.High, 'Simple-text body is not translated']],
+
+  atom_rich_text: [['body', Severity.High, 'Rich-text body is not translated']],
+
+  // image_fields sub-fields (image_file handled in deep validation)
   atom_image: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['image_fields.intro', Severity.Medium, 'Image intro is not translated'],
+    ['image_fields.intro', Severity.High, 'Image intro is not translated'],
     [
       'image_fields.image_alt_text',
       Severity.High,
       'Image alt text is not translated (accessibility)'
     ],
-    ['image_fields.image_caption', Severity.Medium, 'Image caption is not translated'],
-    ['image_fields.outro', Severity.Medium, 'Image outro is not translated']
+    ['image_fields.image_caption', Severity.High, 'Image caption is not translated'],
+    ['image_fields.outro', Severity.High, 'Image outro is not translated']
   ],
+
+  // video_fields sub-fields (video_file, preview_image handled in deep validation)
   atom_video: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['video_fields.intro', Severity.Medium, 'Video intro is not translated'],
+    ['video_fields.intro', Severity.High, 'Video intro is not translated'],
     ['video_fields.video_caption_text', Severity.High, 'Video caption text is not translated'],
-    ['video_fields.video_script', Severity.Medium, 'Video script is not translated'],
-    ['video_fields.outro', Severity.Medium, 'Video outro is not translated']
+    ['video_fields.video_script', Severity.High, 'Video script is not translated'],
+    ['video_fields.outro', Severity.High, 'Video outro is not translated']
   ],
+
+  // audio_fields sub-fields (audio_file handled in deep validation)
   atom_audio: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['audio_fields.intro', Severity.Medium, 'Audio intro is not translated'],
+    ['audio_fields.intro', Severity.High, 'Audio intro is not translated'],
     ['audio_fields.audio_title', Severity.High, 'Audio title is not translated'],
-    ['audio_fields.description', Severity.Medium, 'Audio description is not translated'],
+    ['audio_fields.description', Severity.High, 'Audio description is not translated'],
     ['audio_fields.audio_transcript_text', Severity.High, 'Audio transcript is not translated'],
-    ['audio_fields.outro', Severity.Medium, 'Audio outro is not translated']
+    ['audio_fields.outro', Severity.High, 'Audio outro is not translated']
   ],
+
+  // embedded_media_fields sub-fields (embedded_code is code, not translatable)
   atom_embedded_media: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['embedded_media_fields.intro', Severity.Medium, 'Embedded media intro is not translated'],
-    ['embedded_media_fields.outro', Severity.Medium, 'Embedded media outro is not translated']
+    ['embedded_media_fields.intro', Severity.High, 'Embedded media intro is not translated'],
+    ['embedded_media_fields.outro', Severity.High, 'Embedded media outro is not translated']
   ],
+
+  // embedded_document_fields sub-fields (embedded_file handled in deep validation)
   atom_embedded_document: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['embedded_document_fields.intro', Severity.Medium, 'Document intro is not translated'],
+    ['embedded_document_fields.intro', Severity.High, 'Document intro is not translated'],
     [
       'embedded_document_fields.display_title',
       Severity.High,
@@ -63,92 +71,101 @@ const ATOM_FIELD_RULES = {
     ],
     [
       'embedded_document_fields.download_link_label',
-      Severity.Medium,
+      Severity.High,
       'Download link label is not translated'
     ],
-    ['embedded_document_fields.outro', Severity.Medium, 'Document outro is not translated']
+    ['embedded_document_fields.outro', Severity.High, 'Document outro is not translated']
   ],
+
+  // ── Interactive / Layout ────────────────────────────────────────────────────
+
+  // chat bubble body/speaker_name/avatar handled in deep validation
   atom_chat: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Chat intro is not translated'],
-    ['outro', Severity.Medium, 'Chat outro is not translated']
+    ['intro', Severity.High, 'Chat intro is not translated'],
+    ['outro', Severity.High, 'Chat outro is not translated']
   ],
+
+  // click_to_reveals items handled in deep validation
   atom_click_to_reveal: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Click-to-reveal intro is not translated'],
-    ['outro', Severity.Medium, 'Click-to-reveal outro is not translated']
+    ['intro', Severity.High, 'Click-to-reveal intro is not translated'],
+    ['outro', Severity.High, 'Click-to-reveal outro is not translated']
   ],
+
+  // accordions items handled in deep validation
   atom_accordion_group: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Accordion group intro is not translated'],
-    ['outro', Severity.Medium, 'Accordion group outro is not translated']
+    ['intro', Severity.High, 'Accordion group intro is not translated'],
+    ['outro', Severity.High, 'Accordion group outro is not translated']
   ],
+
+  // slides items handled in deep validation
   atom_slideshow: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Slideshow intro is not translated'],
-    ['outro', Severity.Medium, 'Slideshow outro is not translated']
+    ['intro', Severity.High, 'Slideshow intro is not translated'],
+    ['outro', Severity.High, 'Slideshow outro is not translated']
   ],
+
+  // tab_group items handled in deep validation
   atom_tabs: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Tabs intro is not translated'],
-    ['outro', Severity.Medium, 'Tabs outro is not translated']
+    ['intro', Severity.High, 'Tabs intro is not translated'],
+    ['outro', Severity.High, 'Tabs outro is not translated']
   ],
+
+  // columns items handled in deep validation
   atom_multi_column: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Multi-column intro is not translated'],
-    ['outro', Severity.Medium, 'Multi-column outro is not translated']
+    ['intro', Severity.High, 'Multi-column intro is not translated'],
+    ['outro', Severity.High, 'Multi-column outro is not translated']
   ],
+
+  // cards (FlipCardFields[]) handled in deep validation
   atom_flipcards: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Flipcards intro is not translated'],
-    ['outro', Severity.Medium, 'Flipcards outro is not translated']
+    ['intro', Severity.High, 'Flipcards intro is not translated'],
+    ['outro', Severity.High, 'Flipcards outro is not translated']
   ],
-  atom_flip_cards: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Flip-cards intro is not translated'],
-    ['outro', Severity.Medium, 'Flip-cards outro is not translated']
-  ],
+
+  // cards[]: image_file, image_caption, body handled in deep validation
   atom_card_stack: [
-    ['title', Severity.High, 'Atom title is not translated'],
-    ['intro', Severity.Medium, 'Card stack intro is not translated'],
-    ['outro', Severity.Medium, 'Card stack outro is not translated']
+    ['intro', Severity.High, 'Card stack intro is not translated'],
+    ['outro', Severity.High, 'Card stack outro is not translated']
   ],
+
+  // ── Question atoms ──────────────────────────────────────────────────────────
+  // stem (AllSimpleFields) handled via validateStem()
+  // answer_choices handled in deep validation
+
   atom_mc_question: [
-    ['title', Severity.High, 'Question atom title is not translated'],
     ['prompt', Severity.High, 'MC question prompt is not translated'],
-    ['instruction', Severity.Medium, 'MC question instruction is not translated']
+    ['instruction', Severity.High, 'MC question instruction is not translated']
   ],
+
   atom_tf_question: [
-    ['title', Severity.High, 'Question atom title is not translated'],
     ['prompt', Severity.High, 'T/F question prompt is not translated'],
-    ['instruction', Severity.Medium, 'T/F question instruction is not translated'],
-    ['truthy_label', Severity.Medium, 'True label is not translated'],
-    ['falsey_label', Severity.Medium, 'False label is not translated'],
-    ['correct_feedback', Severity.Medium, 'Correct feedback is not translated'],
-    ['incorrect_feedback', Severity.Medium, 'Incorrect feedback is not translated']
+    ['instruction', Severity.High, 'T/F question instruction is not translated'],
+    ['truthy_label', Severity.High, 'True label is not translated'],
+    ['falsey_label', Severity.High, 'False label is not translated'],
+    ['correct_feedback', Severity.High, 'Correct feedback is not translated'],
+    ['incorrect_feedback', Severity.High, 'Incorrect feedback is not translated']
   ],
+
   atom_fill_in_the_blanks_question: [
-    ['title', Severity.High, 'Question atom title is not translated'],
     ['prompt', Severity.High, 'Fill-in-the-blanks prompt is not translated'],
     ['words_and_blanks', Severity.High, 'Fill-in-the-blanks sentence is not translated'],
-    ['instruction', Severity.Medium, 'Fill-in-the-blanks instruction is not translated'],
-    ['correct_feedback', Severity.Medium, 'Correct feedback is not translated'],
-    ['incorrect_feedback', Severity.Medium, 'Incorrect feedback is not translated']
+    ['instruction', Severity.High, 'Fill-in-the-blanks instruction is not translated'],
+    ['correct_feedback', Severity.High, 'Correct feedback is not translated'],
+    ['incorrect_feedback', Severity.High, 'Incorrect feedback is not translated']
   ],
+
   atom_reorder_words: [
-    ['title', Severity.High, 'Question atom title is not translated'],
     ['prompt', Severity.High, 'Reorder-words prompt is not translated'],
     ['solution', Severity.High, 'Reorder-words solution is not translated'],
-    ['instruction', Severity.Medium, 'Reorder-words instruction is not translated'],
-    ['correct_feedback', Severity.Medium, 'Correct feedback is not translated'],
-    ['incorrect_feedback', Severity.Medium, 'Incorrect feedback is not translated']
+    ['instruction', Severity.High, 'Reorder-words instruction is not translated'],
+    ['correct_feedback', Severity.High, 'Correct feedback is not translated'],
+    ['incorrect_feedback', Severity.High, 'Incorrect feedback is not translated']
   ],
+
   atom_reorder_list: [
-    ['title', Severity.High, 'Question atom title is not translated'],
     ['prompt', Severity.High, 'Reorder-list prompt is not translated'],
-    ['instruction', Severity.Medium, 'Reorder-list instruction is not translated'],
-    ['correct_feedback', Severity.Medium, 'Correct feedback is not translated'],
-    ['incorrect_feedback', Severity.Medium, 'Incorrect feedback is not translated']
+    ['instruction', Severity.High, 'Reorder-list instruction is not translated'],
+    ['correct_feedback', Severity.High, 'Correct feedback is not translated'],
+    ['incorrect_feedback', Severity.High, 'Incorrect feedback is not translated']
   ]
 };
 
@@ -176,10 +193,16 @@ function toDisplayValue(value, max = 180) {
   return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
-function normalizeAtomType(atomType) {
-  if (!atomType) return 'unknown';
-
-  return atomType;
+// ─── File validation helper ───────────────────────────────────────────────────
+// A File is a Contentstack asset object { uid, url, filename, ... }
+// Rules:
+//   - If English has a file, locale MUST also have a file (FileMissing)
+//   - If both have files but the uid differs, flag as FileChanged (Warning)
+//     because a locale may legitimately use a different translated asset,
+//     but it is worth flagging for review.
+//   - If uid is the same it is fine — same asset reused across locales is common.
+function isFileObject(val) {
+  return val !== null && typeof val === 'object' && typeof val.uid === 'string';
 }
 
 function makeIssue({
@@ -261,13 +284,15 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   }
 
   // ─── checkField ─────────────────────────────────────────────────────────────
+  // Validates a translatable string field.
+  // Guards both parent objects so a missing locale parent never crashes.
   function checkField(engObj, locObj, fieldPath, severity, description, objectPath) {
     if (!engObj) return;
 
     const engVal = getNestedValue(engObj, fieldPath);
-    const locVal = getNestedValue(locObj, fieldPath);
+    const locVal = locObj ? getNestedValue(locObj, fieldPath) : undefined;
 
-    // if (isMissing(engVal)) return;
+    if (isMissing(engVal)) return;
 
     if (isMissing(locVal)) {
       push(severity, objectPath, fieldPath, `${description} — value is missing`, {
@@ -277,7 +302,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       });
     } else if (isSameAsEng(engVal, locVal)) {
       push(
-        Severity.Warning,
+        Severity.High,
         objectPath,
         fieldPath,
         `${description} — value appears unchanged from English`,
@@ -288,6 +313,49 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
         }
       );
     }
+  }
+
+  // ─── checkFile ──────────────────────────────────────────────────────────────
+  // Validates a Contentstack File asset field.
+  // engFileVal / locFileVal are the already-resolved File objects (or null/undefined).
+  //
+  // Rules:
+  //   1. If English has no file → nothing to check (file is optional)
+  //   2. If English has a file but locale does not → High (FileMissing)
+  //   3. If both have files but different uid → Warning (FileChanged)
+  //      A locale CAN legitimately use a different translated asset,
+  //      but we flag it so a human can review.
+  //   4. Same uid → OK, no issue raised.
+  function checkFile(engFileVal, locFileVal, fieldPath, objectPath, label) {
+    // Rule 1: English has no file — nothing to validate
+    if (!isFileObject(engFileVal)) return;
+
+    // Rule 2: English has a file, locale is missing it entirely
+    if (!isFileObject(locFileVal)) {
+      push(Severity.High, objectPath, fieldPath, `${label} — locale file asset is missing`, {
+        issueType: IssueType.FileMissing,
+        englishValue: `${engFileVal.filename} (uid: ${engFileVal.uid})`,
+        localizedValue: ''
+      });
+      return;
+    }
+
+    // Rule 3: Both have files but different uid — flag for review
+    if (engFileVal.uid === locFileVal.uid) {
+      push(
+        Severity.Warning,
+        objectPath,
+        fieldPath,
+        `${label} — locale uses a same  file as English (may be intentional if translated)`,
+        {
+          issueType: IssueType.FileChanged,
+          englishValue: `${engFileVal.filename} (uid: ${engFileVal.uid})`,
+          localizedValue: `${locFileVal.filename} (uid: ${locFileVal.uid})`
+        }
+      );
+    }
+
+    // Rule 4: Same uid → no issue
   }
 
   // ─── checkCount ─────────────────────────────────────────────────────────────
@@ -307,6 +375,9 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   }
 
   // ─── validateBasicContentFields ─────────────────────────────────────────────
+  // Handles one BasicContentFields entry.
+  // File fields inside ImageFields / VideoFields / AudioFields /
+  // EmbeddedDocumentFields are validated here via checkFile.
   function validateBasicContentFields(engFields, locFields, path) {
     if (!engFields) return;
     if (!locFields) {
@@ -320,6 +391,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     }
 
     const checkTypes = ['rich_text', 'image', 'video', 'audio', 'document', 'embedded_media'];
+
     checkTypes.forEach((type) => {
       const engBlock = engFields[type];
       const locBlock = locFields[type];
@@ -340,61 +412,110 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
           `${path}.rich_text`
         );
       }
+
       if (type === 'image') {
+        // String fields
         ['intro', 'image_alt_text', 'image_caption', 'outro'].forEach((f) =>
           checkField(
             engBlock,
             locBlock,
             f,
-            f === 'image_alt_text' ? Severity.High : Severity.Medium,
+            Severity.High,
             `Image field "${f}" not translated`,
             `${path}.image`
           )
         );
+        // File field: image_file
+        checkFile(
+          engBlock.image_file,
+          locBlock.image_file,
+          'image_file',
+          `${path}.image`,
+          'Image file'
+        );
       }
+
       if (type === 'video') {
+        // String fields
         ['intro', 'video_caption_text', 'video_script', 'outro'].forEach((f) =>
           checkField(
             engBlock,
             locBlock,
             f,
-            f === 'video_caption_text' ? Severity.High : Severity.Medium,
+            Severity.High,
             `Video field "${f}" not translated`,
             `${path}.video`
           )
         );
+        // File fields: video_file, preview_image
+        checkFile(
+          engBlock.video_file,
+          locBlock.video_file,
+          'video_file',
+          `${path}.video`,
+          'Video file'
+        );
+        checkFile(
+          engBlock.preview_image,
+          locBlock.preview_image,
+          'preview_image',
+          `${path}.video`,
+          'Video preview image'
+        );
       }
+
       if (type === 'audio') {
+        // String fields
         ['intro', 'audio_title', 'description', 'audio_transcript_text', 'outro'].forEach((f) =>
           checkField(
             engBlock,
             locBlock,
             f,
-            ['audio_title', 'audio_transcript_text'].includes(f) ? Severity.High : Severity.Medium,
+            Severity.High,
             `Audio field "${f}" not translated`,
             `${path}.audio`
           )
         );
+        // File field: audio_file
+        checkFile(
+          engBlock.audio_file,
+          locBlock.audio_file,
+          'audio_file',
+          `${path}.audio`,
+          'Audio file'
+        );
       }
+
       if (type === 'document') {
+        // String fields
         ['intro', 'display_title', 'download_link_label', 'outro'].forEach((f) =>
           checkField(
             engBlock,
             locBlock,
             f,
-            f === 'display_title' ? Severity.High : Severity.Medium,
+            Severity.High,
             `Document field "${f}" not translated`,
             `${path}.document`
           )
         );
+        // File field: embedded_file
+        checkFile(
+          engBlock.embedded_file,
+          locBlock.embedded_file,
+          'embedded_file',
+          `${path}.document`,
+          'Embedded document file'
+        );
       }
+
       if (type === 'embedded_media') {
+        // embedded_code is intentionally skipped — it is code/HTML, not translatable prose
         ['intro', 'outro'].forEach((f) =>
           checkField(
             engBlock,
             locBlock,
             f,
-            Severity.Medium,
+            Severity.High,
             `Embedded media field "${f}" not translated`,
             `${path}.embedded_media`
           )
@@ -410,8 +531,10 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       push(Severity.Critical, path, 'all_simple_fields', 'Locale is missing content fields block');
       return;
     }
+
     const engItems = engFields.basic_content_fields ?? [];
     const locItems = locFields.basic_content_fields ?? [];
+
     if (!checkCount(engItems, locItems, 'basic_content_fields items', path)) return;
 
     engItems.forEach((engItem, i) => {
@@ -419,35 +542,103 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     });
   }
 
+  // ─── validateStem ────────────────────────────────────────────────────────────
+  // stem is AllSimpleFields — shared by all question atom types
+  function validateStem(engAtom, locAtom, path) {
+    if (!engAtom?.stem) return;
+    if (!locAtom?.stem) {
+      push(Severity.Critical, `${path}.stem`, 'stem', 'Locale stem (AllSimpleFields) is missing');
+      return;
+    }
+    validateAllSimpleFields(engAtom.stem, locAtom.stem, `${path}.stem`);
+  }
+
   // ─── validateAtom ────────────────────────────────────────────────────────────
   function validateAtom(engAtom, locAtom, path) {
     if (!engAtom) return;
 
-    const rawEngAtomType = engAtom._content_type_uid;
-    const atomType = normalizeAtomType(rawEngAtomType);
+    const atomType = engAtom._content_type_uid ?? 'unknown';
 
     if (!locAtom) {
-      push(Severity.Critical, path, 'atom', `Locale atom is missing (type: ${rawEngAtomType})`);
+      push(Severity.Critical, path, 'atom', `Locale atom is missing (type: ${atomType})`);
       return;
     }
 
-    const rawLocAtomType = locAtom._content_type_uid;
-    const locAtomType = normalizeAtomType(rawLocAtomType);
+    const locAtomType = locAtom._content_type_uid ?? 'unknown';
     if (atomType !== locAtomType) {
       push(
         Severity.Critical,
         path,
         '_content_type_uid',
-        `Atom type mismatch — eng: ${rawEngAtomType}, locale: ${rawLocAtomType}`
+        `Atom type mismatch — eng: ${atomType}, locale: ${locAtomType}`
       );
       return;
     }
 
+    // ── Flat string field rules ──────────────────────────────────────────────
     const rules = ATOM_FIELD_RULES[atomType] ?? [];
     rules.forEach(([fieldPath, severity, description]) => {
       checkField(engAtom, locAtom, fieldPath, severity, description, path);
     });
 
+    // ── Type-specific deep validation ────────────────────────────────────────
+
+    // ── atom_image ───────────────────────────────────────────────────────────
+    // image_fields.image_file (File)
+    if (atomType === 'atom_image') {
+      checkFile(
+        engAtom.image_fields?.image_file,
+        locAtom.image_fields?.image_file,
+        'image_fields.image_file',
+        path,
+        'Image file'
+      );
+    }
+
+    // ── atom_video ───────────────────────────────────────────────────────────
+    // video_fields.video_file (File), video_fields.preview_image (File)
+    if (atomType === 'atom_video') {
+      checkFile(
+        engAtom.video_fields?.video_file,
+        locAtom.video_fields?.video_file,
+        'video_fields.video_file',
+        path,
+        'Video file'
+      );
+      checkFile(
+        engAtom.video_fields?.preview_image,
+        locAtom.video_fields?.preview_image,
+        'video_fields.preview_image',
+        path,
+        'Video preview image'
+      );
+    }
+
+    // ── atom_audio ───────────────────────────────────────────────────────────
+    // audio_fields.audio_file (File)
+    if (atomType === 'atom_audio') {
+      checkFile(
+        engAtom.audio_fields?.audio_file,
+        locAtom.audio_fields?.audio_file,
+        'audio_fields.audio_file',
+        path,
+        'Audio file'
+      );
+    }
+
+    // ── atom_embedded_document ───────────────────────────────────────────────
+    // embedded_document_fields.embedded_file (File)
+    if (atomType === 'atom_embedded_document') {
+      checkFile(
+        engAtom.embedded_document_fields?.embedded_file,
+        locAtom.embedded_document_fields?.embedded_file,
+        'embedded_document_fields.embedded_file',
+        path,
+        'Embedded document file'
+      );
+    }
+
+    // ── atom_click_to_reveal ─────────────────────────────────────────────────
     if (atomType === 'atom_click_to_reveal') {
       const engItems = engAtom.click_to_reveals ?? [];
       const locItems = locAtom.click_to_reveals ?? [];
@@ -485,6 +676,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
+    // ── atom_accordion_group ─────────────────────────────────────────────────
     if (atomType === 'atom_accordion_group') {
       const engAccordions = engAtom.accordions ?? [];
       const locAccordions = locAtom.accordions ?? [];
@@ -511,6 +703,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
+    // ── atom_tabs ────────────────────────────────────────────────────────────
     if (atomType === 'atom_tabs') {
       const engTabs = engAtom.tab_group ?? [];
       const locTabs = locAtom.tab_group ?? [];
@@ -537,6 +730,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
+    // ── atom_slideshow ───────────────────────────────────────────────────────
     if (atomType === 'atom_slideshow') {
       const engSlides = engAtom.slides ?? [];
       const locSlides = locAtom.slides ?? [];
@@ -551,6 +745,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
+    // ── atom_multi_column ────────────────────────────────────────────────────
     if (atomType === 'atom_multi_column') {
       const engCols = engAtom.columns ?? [];
       const locCols = locAtom.columns ?? [];
@@ -561,15 +756,20 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
+    // ── atom_chat ────────────────────────────────────────────────────────────
+    // chat[].bubble: body (string), speaker_name (string), avatar (File)
     if (atomType === 'atom_chat') {
       const engBubbles = engAtom.chat ?? [];
       const locBubbles = locAtom.chat ?? [];
       if (checkCount(engBubbles, locBubbles, 'chat bubbles', path)) {
         engBubbles.forEach((eb, i) => {
+          const locBubble = locBubbles[i];
           const bubblePath = `${path}.chat[${i}]`;
+
+          // String fields
           checkField(
             eb?.bubble,
-            locBubbles[i]?.bubble,
+            locBubble?.bubble,
             'body',
             Severity.High,
             'Chat bubble body not translated',
@@ -577,67 +777,143 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
           );
           checkField(
             eb?.bubble,
-            locBubbles[i]?.bubble,
+            locBubble?.bubble,
             'speaker_name',
-            Severity.Low,
+            Severity.High,
             'Chat bubble speaker name not translated',
             bubblePath
+          );
+
+          // File field: avatar
+          checkFile(
+            eb?.bubble?.avatar,
+            locBubble?.bubble?.avatar,
+            'bubble.avatar',
+            bubblePath,
+            'Chat bubble avatar'
           );
         });
       }
     }
 
+    // ── atom_card_stack ──────────────────────────────────────────────────────
+    // cards[]: image_caption (string), body (string), image_file (File)
     if (atomType === 'atom_card_stack') {
       const engCards = engAtom.cards ?? [];
       const locCards = locAtom.cards ?? [];
       if (checkCount(engCards, locCards, 'cards', path)) {
         engCards.forEach((ec, i) => {
+          const locCard = locCards[i];
+          const cardPath = `${path}.cards[${i}]`;
+
+          // String fields
+          checkField(ec, locCard, 'body', Severity.High, 'Card body not translated', cardPath);
           checkField(
             ec,
-            locCards[i],
-            'body',
-            Severity.High,
-            'Card body not translated',
-            `${path}.cards[${i}]`
-          );
-          checkField(
-            ec,
-            locCards[i],
+            locCard,
             'image_caption',
-            Severity.Low,
+            Severity.High,
             'Card image caption not translated',
-            `${path}.cards[${i}]`
+            cardPath
           );
+
+          // File field: image_file
+          checkFile(ec?.image_file, locCard?.image_file, 'image_file', cardPath, 'Card image file');
         });
       }
     }
 
-    if (atomType === 'atom_flipcards' || atomType === 'atom_flip_cards') {
+    // ── atom_flipcards ───────────────────────────────────────────────────────
+    // cards[] is FlipCardFields[]
+    // FlipCardFields:
+    //   front_card[]: FrontCard { header.content (string), body.content (string), image.content (File) }
+    //   back_card[]:  BackCard  { header.content (string), body.content (string), image.content (File) }
+    if (atomType === 'atom_flipcards') {
       const engCards = engAtom.cards ?? [];
       const locCards = locAtom.cards ?? [];
-      if (checkCount(engCards, locCards, 'flip cards', path)) {
+      if (checkCount(engCards, locCards, 'flipcards', path)) {
         engCards.forEach((ec, i) => {
-          checkField(
-            ec,
-            locCards[i],
-            'front_body',
-            Severity.High,
-            'Flip card front body not translated',
-            `${path}.cards[${i}]`
-          );
-          checkField(
-            ec,
-            locCards[i],
-            'back_body',
-            Severity.High,
-            'Flip card back body not translated',
-            `${path}.cards[${i}]`
-          );
+          const locCard = locCards[i];
+          const cardPath = `${path}.cards[${i}]`;
+
+          // front_card[] — FrontCard[]
+          const engFront = ec?.front_card ?? [];
+          const locFront = locCard?.front_card ?? [];
+          if (checkCount(engFront, locFront, 'front_card items', cardPath)) {
+            engFront.forEach((ef, fi) => {
+              const locF = locFront[fi];
+              const fp = `${cardPath}.front_card[${fi}]`;
+              // String fields
+              checkField(
+                ef?.header,
+                locF?.header,
+                'content',
+                Severity.High,
+                'Flip card front header not translated',
+                fp
+              );
+              checkField(
+                ef?.body,
+                locF?.body,
+                'content',
+                Severity.High,
+                'Flip card front body not translated',
+                fp
+              );
+              // File field: image.content (File)
+              checkFile(
+                ef?.image?.content,
+                locF?.image?.content,
+                'image.content',
+                fp,
+                'Flip card front image'
+              );
+            });
+          }
+
+          // back_card[] — BackCard[]
+          const engBack = ec?.back_card ?? [];
+          const locBack = locCard?.back_card ?? [];
+          if (checkCount(engBack, locBack, 'back_card items', cardPath)) {
+            engBack.forEach((eb, bi) => {
+              const locB = locBack[bi];
+              const bp = `${cardPath}.back_card[${bi}]`;
+              // String fields
+              checkField(
+                eb?.header,
+                locB?.header,
+                'content',
+                Severity.High,
+                'Flip card back header not translated',
+                bp
+              );
+              checkField(
+                eb?.body,
+                locB?.body,
+                'content',
+                Severity.High,
+                'Flip card back body not translated',
+                bp
+              );
+              // File field: image.content (File)
+              checkFile(
+                eb?.image?.content,
+                locB?.image?.content,
+                'image.content',
+                bp,
+                'Flip card back image'
+              );
+            });
+          }
         });
       }
     }
 
+    // ── atom_mc_question ─────────────────────────────────────────────────────
+    // stem (AllSimpleFields) + answer_choices[]: body, feedback
     if (atomType === 'atom_mc_question') {
+      validateStem(engAtom, locAtom, path);
+
       const engChoices = engAtom.answer_choices ?? [];
       const locChoices = locAtom.answer_choices ?? [];
       if (checkCount(engChoices, locChoices, 'answer choices', path)) {
@@ -655,7 +931,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
             ec,
             locChoices[i],
             'feedback',
-            Severity.Medium,
+            Severity.High,
             'Answer choice feedback not translated',
             choicePath
           );
@@ -663,34 +939,17 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       }
     }
 
-    if (atomType === 'atom_reorder_list') {
-      const engChoices = engAtom.reorder_choices ?? [];
-      const locChoices = locAtom.reorder_choices ?? [];
-      if (checkCount(engChoices, locChoices, 'reorder choices', path)) {
-        engChoices.forEach((ec, i) => {
-          checkField(
-            ec,
-            locChoices[i],
-            'body',
-            Severity.High,
-            'Reorder choice body not translated',
-            `${path}.reorder_choices[${i}]`
-          );
-        });
-      }
-      const engOrders = engChoices.map((c) => c.order);
-      const locOrders = locChoices.map((c) => c.order);
-      if (JSON.stringify(engOrders) !== JSON.stringify(locOrders)) {
-        push(
-          Severity.Critical,
-          path,
-          'reorder_choices.order',
-          'Reorder choice ordering differs from English — locale order must be preserved'
-        );
-      }
+    // ── atom_tf_question ─────────────────────────────────────────────────────
+    // stem (AllSimpleFields) — flat fields already in ATOM_FIELD_RULES
+    if (atomType === 'atom_tf_question') {
+      validateStem(engAtom, locAtom, path);
     }
 
+    // ── atom_fill_in_the_blanks_question ─────────────────────────────────────
+    // stem (AllSimpleFields) + fill_words[]: text
     if (atomType === 'atom_fill_in_the_blanks_question') {
+      validateStem(engAtom, locAtom, path);
+
       const engWords = engAtom.fill_words ?? [];
       const locWords = locAtom.fill_words ?? [];
       if (checkCount(engWords, locWords, 'fill words', path)) {
@@ -706,6 +965,45 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
         });
       }
     }
+
+    // ── atom_reorder_words ───────────────────────────────────────────────────
+    // stem (AllSimpleFields) — flat fields already in ATOM_FIELD_RULES
+    if (atomType === 'atom_reorder_words') {
+      validateStem(engAtom, locAtom, path);
+    }
+
+    // ── atom_reorder_list ────────────────────────────────────────────────────
+    // stem (AllSimpleFields) + reorder_choices[]: body + order preservation
+    if (atomType === 'atom_reorder_list') {
+      validateStem(engAtom, locAtom, path);
+
+      const engChoices = engAtom.reorder_choices ?? [];
+      const locChoices = locAtom.reorder_choices ?? [];
+      if (checkCount(engChoices, locChoices, 'reorder choices', path)) {
+        engChoices.forEach((ec, i) => {
+          checkField(
+            ec,
+            locChoices[i],
+            'body',
+            Severity.High,
+            'Reorder choice body not translated',
+            `${path}.reorder_choices[${i}]`
+          );
+        });
+      }
+
+      // Order values must be preserved between eng and locale
+      const engOrders = engChoices.map((c) => c.order);
+      const locOrders = locChoices.map((c) => c.order);
+      if (JSON.stringify(engOrders) !== JSON.stringify(locOrders)) {
+        push(
+          Severity.Critical,
+          path,
+          'reorder_choices.order',
+          'Reorder choice ordering differs from English — locale order must be preserved'
+        );
+      }
+    }
   }
 
   // ─── validatePage ────────────────────────────────────────────────────────────
@@ -716,7 +1014,14 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       return;
     }
 
-    checkField(engPage, locPage, 'title', Severity.High, 'Page title is not translated', path);
+    checkField(
+      engPage,
+      locPage,
+      'display_title',
+      Severity.High,
+      'Page title is not translated',
+      path
+    );
 
     const engAtoms = engPage.atoms ?? [];
     const locAtoms = locPage.atoms ?? [];
@@ -724,9 +1029,10 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     if (!checkCount(engAtoms, locAtoms, 'atoms', path)) return;
 
     engAtoms.forEach((engAtom, i) => {
+      // Atoms are referenced via atom_reference[0] per Contentstack response shape
       validateAtom(
         engAtom.atom_reference?.[0],
-        locAtoms[i].atom_reference?.[0],
+        locAtoms[i]?.atom_reference?.[0],
         `${path}.atoms[${i}]`
       );
     });
@@ -743,7 +1049,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     checkField(
       engLesson,
       locLesson,
-      'title',
+      'display_title',
       Severity.High,
       'Lesson title is not translated',
       path
@@ -760,6 +1066,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   }
 
   // ─── validateQuestion ────────────────────────────────────────────────────────
+  // Quiz/Assessment questions are direct atom objects (not wrapped in atom_reference)
   function validateQuestion(engQ, locQ, path) {
     if (!engQ) return;
     if (!locQ) {
@@ -777,7 +1084,14 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       return;
     }
 
-    checkField(engQuiz, locQuiz, 'title', Severity.High, 'Quiz title is not translated', path);
+    checkField(
+      engQuiz,
+      locQuiz,
+      'display_title',
+      Severity.High,
+      'Quiz title is not translated',
+      path
+    );
 
     const engQs = engQuiz.questions ?? [];
     const locQs = locQuiz.questions ?? [];
@@ -800,7 +1114,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     checkField(
       engAssessment,
       locAssessment,
-      'title',
+      'display_title',
       Severity.High,
       'Assessment title is not translated',
       path
@@ -824,7 +1138,14 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       return;
     }
 
-    checkField(engExam, locExam, 'title', Severity.High, 'Exam title is not translated', path);
+    checkField(
+      engExam,
+      locExam,
+      'display_title',
+      Severity.High,
+      'Exam title is not translated',
+      path
+    );
 
     const engAssessments = engExam.assessments ?? [];
     const locAssessments = locExam.assessments ?? [];
@@ -844,7 +1165,14 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       return;
     }
 
-    checkField(engTopic, locTopic, 'title', Severity.High, 'Topic title is not translated', path);
+    checkField(
+      engTopic,
+      locTopic,
+      'display_title',
+      Severity.High,
+      'Topic title is not translated',
+      path
+    );
 
     const engCollections = engTopic.collection_types ?? [];
     const locCollections = locTopic.collection_types ?? [];
@@ -855,7 +1183,6 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       const locColl = locCollections[i];
       const collPath = `${path}.collection_types[${i}]`;
 
-      // KEY FIX: explicit missing-child check before descending, not just passing undefined
       if (engColl.lesson) {
         if (!locColl?.lesson) {
           push(
@@ -908,7 +1235,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     checkField(
       engChapter,
       locChapter,
-      'title',
+      'display_title',
       Severity.High,
       'Chapter title is not translated',
       path
@@ -923,7 +1250,6 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       const locSub = locSubs[i];
       const subPath = `${path}.sub_sections[${i}]`;
 
-      // KEY FIX: explicit missing-child check before descending
       if (engSub.topic) {
         if (!locSub?.topic) {
           push(
@@ -947,9 +1273,6 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
       return;
     }
 
-    // KEY FIX: explicit missing-child checks at every branch
-    // Previously we passed locSection.chapter directly which could be undefined,
-    // causing crashes deep inside the child validator before the null guard fired.
     if (engSection.chapter) {
       if (!locSection.chapter) {
         push(
@@ -1016,7 +1339,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
     engCourse,
     localeCourse,
     'course_description',
-    Severity.Medium,
+    Severity.High,
     'Course description is not translated',
     'course'
   );
