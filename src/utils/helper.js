@@ -260,7 +260,7 @@ function buildSummary(issues, courseId, locale) {
     minor_issues: issues.filter((i) => ['Low', 'Warning'].includes(i.severity_level))
   };
 
-  return { results: issues, summary };
+  return { results: issues, summary: summary };
 }
 
 // ─── Core validator ───────────────────────────────────────────────────────────
@@ -348,7 +348,7 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
         fieldPath,
         `${label} — locale uses a same  file as English (may be intentional if translated)`,
         {
-          issueType: IssueType.FileChanged,
+          issueType: IssueType.SameAsEnglish,
           englishValue: `${engFileVal.filename} (uid: ${engFileVal.uid})`,
           localizedValue: `${locFileVal.filename} (uid: ${locFileVal.uid})`
         }

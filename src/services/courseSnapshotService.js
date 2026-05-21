@@ -7,11 +7,8 @@ import { AppError } from '../utils/error.js';
 const COURSE_CONTENT_TYPE_UID = 'course';
 const BASE_LOCALE = 'en-us';
 
-const findLocale = (availableLocales, locale) =>
-  availableLocales.find((item) => item.code.toLowerCase() === locale.toLowerCase());
-
-const fetchCourseByLocale = async ({ courseId, locale }) => {
-  const { course } = await getCourse({
+export const fetchCourseByLocale = async ({ courseId, locale }) => {
+  const { course, notFound } = await getCourse({
     entryQuery: {
       content_type_uid: COURSE_CONTENT_TYPE_UID,
       entry_uid: courseId
@@ -19,30 +16,35 @@ const fetchCourseByLocale = async ({ courseId, locale }) => {
     lng: locale
   });
 
-  if (!course) {
-    throw new AppError(`Course not found for locale ${locale}`, 404);
+  if (notFound) return null;
+
+  if (!course) return null;
+
+  // Contentstack silently falls back to base locale when the requested
+  // locale has no entry — detect this and treat it as not found
+  const returnedLocale = course.locale?.toLowerCase();
+  if (returnedLocale && returnedLocale !== locale.toLowerCase()) {
+    return null;
   }
 
   return course;
 };
 
-const stringifySnapshot = (course, locale) => {
+const stringifySnapshot = (course) => {
   let serialized;
-
   try {
     serialized = JSON.stringify(course, null, 2);
+    return {
+      serialized: serialized,
+      success: true
+    };
   } catch (error) {
-    throw new AppError(
-      `Failed to serialize course snapshot for locale ${locale}: ${error.message}`,
-      500
-    );
+    console.log(error);
+    return {
+      serialized: serialized,
+      success: false
+    };
   }
-
-  if (!serialized || serialized.trim().length === 0) {
-    throw new AppError(`Snapshot payload is empty for locale ${locale}`, 500);
-  }
-
-  return serialized;
 };
 
 const fileExists = async (filePath) => {
@@ -54,10 +56,20 @@ const fileExists = async (filePath) => {
   }
 };
 
-export const prepareCourseSnapshots = async ({ courseId, locale }) => {
-  try {
-    const normalizedLocale = locale.toLowerCase();
+const writeSnapshotIfMissing = async ({ absolutePath, course }) => {
+  const exists = await fileExists(absolutePath);
+  if (exists) return;
 
+  const { serialized, success } = stringifySnapshot(course);
+  if (success) {
+    await writeFile(`${absolutePath}.tmp`, serialized, 'utf-8');
+    await rename(`${absolutePath}.tmp`, absolutePath);
+  }
+};
+
+export const prepareCourseSnapshots = async ({ courseId }) => {
+  try {
+    // 1. Fetch all available locales
     let availableLocales;
     try {
       availableLocales = await getAvailableLocales();
@@ -65,28 +77,42 @@ export const prepareCourseSnapshots = async ({ courseId, locale }) => {
       throw new AppError(`Failed to fetch available locales: ${error.message}`, 502);
     }
 
-    const localeMatch = findLocale(availableLocales, normalizedLocale);
-    if (!localeMatch) {
-      throw new AppError(`Locale ${locale} is not available`, 400);
+    if (!availableLocales?.length) {
+      throw new AppError('No locales available', 500);
     }
 
-    let baseCourse;
-    let localizedCourse;
+    const localeCodes = availableLocales.map((l) => l.code.toLowerCase());
+
+    // Ensure base locale is always included
+    if (!localeCodes.includes(BASE_LOCALE)) {
+      localeCodes.unshift(BASE_LOCALE);
+    }
+
+    // 2. Fetch all locale versions in parallel
+    let coursesByLocale;
+    let validCoursesLocale;
     try {
-      [baseCourse, localizedCourse] = await Promise.all([
-        fetchCourseByLocale({ courseId, locale: BASE_LOCALE }),
-        fetchCourseByLocale({ courseId, locale: normalizedLocale })
-      ]);
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        `Failed to fetch course snapshots for ${courseId} (${BASE_LOCALE}, ${normalizedLocale}): ${error.message}`,
-        502
+      const results = await Promise.all(
+        localeCodes.map(async (locale) => {
+          const course = await fetchCourseByLocale({ courseId, locale });
+          return { locale, course: course };
+        })
       );
+      const validCourses = results.filter((r) => r.course !== null);
+      validCoursesLocale = results
+        ?.filter((item) => item?.course !== null)
+        ?.map((item) => item?.locale);
+
+      // Filter out locales where the course doesn't exist, but keep track of them
+      coursesByLocale = Object.fromEntries(
+        validCourses.map(({ locale, course }) => [locale, course])
+      );
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError(`Failed to fetch course snapshots for ${courseId}: ${error.message}`, 502);
     }
 
+    const baseCourse = coursesByLocale[BASE_LOCALE];
     const version = baseCourse?._version;
     if (!version) {
       throw new AppError(
@@ -95,6 +121,7 @@ export const prepareCourseSnapshots = async ({ courseId, locale }) => {
       );
     }
 
+    // 3. Prepare output directory
     const courseDir = path.join(process.cwd(), 'public', 'course');
     try {
       await mkdir(courseDir, { recursive: true });
@@ -102,66 +129,40 @@ export const prepareCourseSnapshots = async ({ courseId, locale }) => {
       throw new AppError(`Failed to prepare course snapshot directory: ${error.message}`, 500);
     }
 
-    const basePath = path.join('public', 'course', `${courseId}-${BASE_LOCALE}-${version}.json`);
-    const localePath = path.join(
-      'public',
-      'course',
-      `${courseId}-${normalizedLocale}-${version}.json`
-    );
-    const absoluteBasePath = path.join(process.cwd(), basePath);
-    const absoluteLocalePath = path.join(process.cwd(), localePath);
-
-    let baseExists;
-    let localeExists;
+    // 4. Write all snapshots to disk (skip if already exists)
+    const snapshotPaths = {};
     try {
-      [baseExists, localeExists] = await Promise.all([
-        fileExists(absoluteBasePath),
-        fileExists(absoluteLocalePath)
-      ]);
+      await Promise.all(
+        validCoursesLocale.map(async (locale) => {
+          const relativePath = path.join(
+            'public',
+            'course',
+            `${courseId}-${locale}-${version}.json`
+          );
+          const absolutePath = path.join(process.cwd(), relativePath);
+
+          await writeSnapshotIfMissing({
+            absolutePath,
+            course: coursesByLocale[locale]
+          });
+
+          snapshotPaths[locale] = relativePath;
+        })
+      );
     } catch (error) {
-      throw new AppError(`Failed to check snapshot file existence: ${error.message}`, 500);
-    }
-
-    const writes = [];
-
-    if (!baseExists) {
-      const baseSerialized = stringifySnapshot(baseCourse, BASE_LOCALE);
-      writes.push(
-        writeFile(`${absoluteBasePath}.tmp`, baseSerialized, 'utf-8').then(() =>
-          rename(`${absoluteBasePath}.tmp`, absoluteBasePath)
-        )
-      );
-    }
-
-    if (!localeExists) {
-      const localizedSerialized = stringifySnapshot(localizedCourse, normalizedLocale);
-      writes.push(
-        writeFile(`${absoluteLocalePath}.tmp`, localizedSerialized, 'utf-8').then(() =>
-          rename(`${absoluteLocalePath}.tmp`, absoluteLocalePath)
-        )
-      );
-    }
-
-    if (writes.length > 0) {
-      try {
-        await Promise.all(writes);
-      } catch (error) {
-        throw new AppError(`Failed to write course snapshot files: ${error.message}`, 500);
-      }
+      console.log(error);
+      if (error instanceof AppError) throw error;
+      throw new AppError(`Failed to write course snapshot files: ${error.message}`, 500);
     }
 
     return {
-      basePath,
-      localePath,
+      version,
       baseCourse,
-      localizedCourse,
-      locale: normalizedLocale,
-      version
+      coursesByLocale,
+      snapshotPaths // { 'en-us': 'public/course/xyz-en-us-3.json', 'fr-fr': '...', ... }
     };
   } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
+    if (error instanceof AppError) throw error;
     throw new AppError(`Failed to prepare course snapshots: ${error.message}`, 500);
   }
 };
