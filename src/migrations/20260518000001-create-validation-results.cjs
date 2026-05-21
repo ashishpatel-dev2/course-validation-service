@@ -14,15 +14,11 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'validation_jobs',
+          model: 'validation_reports',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
-      },
-      course_id: {
-        type: Sequelize.STRING,
-        allowNull: false
       },
       locale: {
         type: Sequelize.STRING,
@@ -43,6 +39,14 @@ module.exports = {
       issue_description: {
         type: Sequelize.TEXT,
         allowNull: false
+      },
+      eng_value: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      localize_value: {
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       created_at: {
         allowNull: false,

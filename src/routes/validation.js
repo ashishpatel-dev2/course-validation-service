@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { createValidationJobController } from '../controllers/validationController.js';
+import { createValidationReportController } from '../controllers/validationController.js';
 import { asyncHandler } from '../utils/error.js';
 
 const router = Router();
 
-router.post('/validate', asyncHandler(createValidationJobController));
+router.post('/validate', asyncHandler(createValidationReportController));
 
 export default router;

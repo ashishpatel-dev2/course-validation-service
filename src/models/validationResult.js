@@ -37,6 +37,14 @@ const validationResultModel = (sequelize) => {
       issue_description: {
         type: DataTypes.TEXT,
         allowNull: false
+      },
+      eng_value: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      localize_value: {
+        type: DataTypes.TEXT,
+        allowNull: true
       }
     },
     {

@@ -19,6 +19,7 @@ export const fetchCourseByLocale = async ({ courseId, locale }) => {
   if (notFound) return null;
 
   if (!course) return null;
+  if (!course) return null;
 
   // Contentstack silently falls back to base locale when the requested
   // locale has no entry — detect this and treat it as not found

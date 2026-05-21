@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('validation_jobs', {
+    await queryInterface.createTable('validation_reports', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -18,11 +18,6 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false
       },
-      status: {
-        type: Sequelize.ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED'),
-        allowNull: false,
-        defaultValue: 'PENDING'
-      },
       base_path: {
         type: Sequelize.STRING,
         allowNull: true
@@ -30,6 +25,11 @@ module.exports = {
       locale_path: {
         type: Sequelize.STRING,
         allowNull: true
+      },
+      version: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 1
       },
       created_at: {
         allowNull: false,
@@ -45,7 +45,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('validation_jobs');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_validation_jobs_status";');
+    await queryInterface.dropTable('validation_reports');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_validation_reports_status";');
   }
 };

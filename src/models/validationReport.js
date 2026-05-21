@@ -1,8 +1,8 @@
 import { DataTypes } from 'sequelize';
 
-const validationJobModel = (sequelize) => {
-  const ValidationJob = sequelize.define(
-    'ValidationJob',
+const validationReportModel = (sequelize) => {
+  const ValidationReport = sequelize.define(
+    'ValidationReport',
     {
       id: {
         type: DataTypes.INTEGER,
@@ -17,11 +17,6 @@ const validationJobModel = (sequelize) => {
       locale: {
         type: DataTypes.STRING,
         allowNull: false
-      },
-      status: {
-        type: DataTypes.ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED'),
-        allowNull: false,
-        defaultValue: 'PENDING'
       },
       base_path: {
         type: DataTypes.STRING,
@@ -38,25 +33,21 @@ const validationJobModel = (sequelize) => {
       }
     },
     {
-      tableName: 'validation_jobs',
+      tableName: 'validation_reports',
       underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at'
     }
   );
 
-  ValidationJob.associate = (models) => {
-    ValidationJob.hasMany(models.ValidationResult, {
+  ValidationReport.associate = (models) => {
+    ValidationReport.hasMany(models.ValidationResult, {
       foreignKey: 'job_id',
       as: 'results'
     });
-    ValidationJob.hasOne(models.ValidationSummary, {
-      foreignKey: 'job_id',
-      as: 'summary'
-    });
   };
 
-  return ValidationJob;
+  return ValidationReport;
 };
 
-export default validationJobModel;
+export default validationReportModel;

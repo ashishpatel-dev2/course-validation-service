@@ -13,7 +13,7 @@ import { sendSuccess } from '../utils/response.js';
 //   'sw-ke',
 //   'tr-tr',
 //   'zu',
-export const createValidationJobController = async (req, res) => {
+export const createValidationReportController = async (req, res) => {
   try {
     const { courseId } = req.body || {};
     if (!courseId) {
