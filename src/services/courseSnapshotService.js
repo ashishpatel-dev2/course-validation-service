@@ -138,7 +138,7 @@ export const prepareCourseSnapshots = async ({ courseId }) => {
           const relativePath = path.join(
             'public',
             'course',
-            `${courseId}-${locale}-${version}.json`
+            `${courseId}-${locale}-${coursesByLocale[locale]?._version}.json`
           );
           const absolutePath = path.join(process.cwd(), relativePath);
 

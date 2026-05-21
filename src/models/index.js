@@ -7,7 +7,7 @@ const db = {};
 
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
-db.ValidationJob = validationReportModel(sequelize);
+db.ValidationReport = validationReportModel(sequelize);
 db.ValidationResult = validationResultModel(sequelize);
 
 Object.keys(db).forEach((modelName) => {

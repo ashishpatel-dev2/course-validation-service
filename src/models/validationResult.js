@@ -56,7 +56,7 @@ const validationResultModel = (sequelize) => {
   );
 
   ValidationResult.associate = (models) => {
-    ValidationResult.belongsTo(models.ValidationJob, {
+    ValidationResult.belongsTo(models.ValidationReport, {
       foreignKey: 'job_id',
       as: 'job'
     });
