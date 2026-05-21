@@ -231,38 +231,6 @@ function makeIssue({
   };
 }
 
-// ─── Summary builder ──────────────────────────────────────────────────────────
-
-function buildSummary(issues, courseId, locale) {
-  const counts = {
-    Critical: 0,
-    High: 0,
-    Medium: 0,
-    Low: 0,
-    Warning: 0
-  };
-
-  issues.forEach((issue) => {
-    counts[issue.severity_level] = (counts[issue.severity_level] ?? 0) + 1;
-  });
-
-  const total = issues.length;
-
-  const summary = {
-    course_id: courseId,
-    locale,
-    total_issues: total,
-    by_severity: counts,
-    has_critical: counts.Critical > 0,
-    passed: total === 0,
-    structural_issues: issues.filter((i) => i.severity_level === 'Critical'),
-    translation_issues: issues.filter((i) => ['High', 'Medium'].includes(i.severity_level)),
-    minor_issues: issues.filter((i) => ['Low', 'Warning'].includes(i.severity_level))
-  };
-
-  return { results: issues, summary: summary };
-}
-
 // ─── Core validator ───────────────────────────────────────────────────────────
 
 export function validateCourseLocale({ engCourse, localeCourse, jobId, locale }) {
@@ -1348,12 +1316,12 @@ export function validateCourseLocale({ engCourse, localeCourse, jobId, locale })
   const locSections = localeCourse.sections ?? [];
 
   if (!checkCount(engSections, locSections, 'sections', 'course')) {
-    return buildSummary(issues, courseId, locale);
+    return { issues };
   }
 
   engSections.forEach((engSection, i) => {
     validateSection(engSection, locSections[i], `course.sections[${i}]`);
   });
 
-  return buildSummary(issues, courseId, locale);
+  return { issues };
 }

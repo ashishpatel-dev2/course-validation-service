@@ -24,10 +24,19 @@ export const createValidationReportController = async (req, res) => {
       locale_path: locale === BASE_LOCALE ? null : (snapshotPaths[locale] ?? null),
       version: coursesByLocale[locale]?._version
     }));
-
-    const reports = await db.ValidationReport.bulkCreate(validationReportRows, {
-      returning: true
+    const existingReports = await db.ValidationReport.findAll({
+      where: {
+        course_id: courseId,
+        version: Object.keys(coursesByLocale)?.map((locale) => coursesByLocale[locale]?._version)
+      },
+      attributes: ['locale']
     });
+    const existingLocales = new Set(existingReports.map((r) => r.locale));
+
+    const newRows = validationReportRows.filter((row) => !existingLocales.has(row.locale));
+
+    const reports =
+      newRows.length > 0 ? await db.ValidationReport.bulkCreate(newRows, { returning: true }) : [];
 
     return sendSuccess(res, {
       statusCode: 202,
